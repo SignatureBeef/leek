@@ -1,0 +1,28 @@
+<Project>
+  <PropertyGroup>
+    <Authors>Leek contributors</Authors>
+    <LeekVersion>0.0.0.1-alpha</LeekVersion>
+    <Version>$(LeekVersion)</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Leek.Core' Or '$(MSBuildProjectName)' == 'Leek.Services' Or '$(MSBuildProjectName)' == 'Leek.AspNet'">
+    <PackageVersion>$(LeekVersion)</PackageVersion>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>License</_Parameter1>
+      <_Parameter2>GPL-3.0-or-later</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>LicenseUrl</_Parameter1>
+      <_Parameter2>https://www.gnu.org/licenses/gpl-3.0.html</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="$(SolutionDir)README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+</Project>

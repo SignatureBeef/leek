@@ -1,0 +1,120 @@
+name: Publish NuGet and GitHub Release
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  build-nuget-packages:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Pack
+      run: dotnet pack --configuration Release --no-build -o ./artifacts/nuget
+
+    - name: Upload NuGet package artifacts for later use
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages
+        path: ./artifacts/nuget/
+
+  publish-nuget:
+    needs: build-nuget-packages
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download NuGet packages
+      uses: actions/download-artifact@v4
+      with:
+        name: nuget-packages
+        path: ./artifacts/nuget
+
+    - name: Publish NuGet Package
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: dotnet nuget push ./artifacts/nuget/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key $NUGET_API_KEY
+
+  build-cli:
+    runs-on: ${{ matrix.outputs.os }}
+    strategy:
+      matrix:
+        outputs: [
+          { os: ubuntu-latest, rid: linux-x64 },
+          { os: windows-latest, rid: win-x64 },
+          { os: macos-latest, rid: osx-x64 },
+          { os: ubuntu-latest, rid: linux-arm64 },
+          { os: windows-latest, rid: win-arm64 },
+          { os: macos-latest, rid: osx-arm64 }
+        ]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Publish non-windows CLI
+      if: matrix.outputs.os != 'windows-latest'
+      run: |
+        cd ./src/Leek.CLI
+        dotnet publish -r ${{ matrix.outputs.rid }} --framework net9.0 --self-contained true -c Release --no-restore -p:PublishTrimmed=true
+        mkdir -p ../../artifacts/builds
+        cd ./bin/Release/net9.0/${{ matrix.outputs.rid }}/publish
+        zip ../../../../../../../artifacts/builds/cli-${{ matrix.outputs.rid }}.zip -r .
+
+    - name: Publish windows CLI
+      if: matrix.outputs.os == 'windows-latest'
+      run: |
+        cd ./src/Leek.CLI
+        dotnet publish -r ${{ matrix.outputs.rid }} --framework net9.0 --self-contained true -c Release --no-restore -p:PublishTrimmed=true
+        mkdir -p ../../artifacts/builds
+        cd ./bin/Release/net9.0/${{ matrix.outputs.rid }}/publish
+        powershell Compress-Archive -Path "./*" -DestinationPath "../../../../../../../artifacts/builds/cli-${{ matrix.outputs.rid }}.zip"
+
+    - name: Upload build artifacts for later use
+      uses: actions/upload-artifact@v4
+      with:
+        name: leek-cli-${{ matrix.outputs.rid }}
+        path: ./artifacts/builds
+
+  create-cli-release:
+    needs: build-cli
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4  # .git access is needed for gh release
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts/builds
+
+    - name: Create GitHub Release and upload assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release create "LeekCLI" ./artifacts/builds/**/*.zip \
+          --title "Leek CLI Release" \
+          --notes "Automated release for Leek CLI"
+      # run: |
+      #   TAG_NAME=${GITHUB_REF##*/}
+      #   gh release create "$TAG_NAME" ./artifacts/builds/**/* \
+      #     --title "Release $TAG_NAME" \
+      #     --notes "Automated release for $TAG_NAME"

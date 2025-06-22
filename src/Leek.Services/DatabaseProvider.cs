@@ -1,0 +1,185 @@
+// Copyright © 2025 Leek contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+using EFCore.BulkExtensions;
+using Leek.Core;
+using Leek.Core.Providers;
+using Leek.Core.Services;
+using Leek.Services.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
+
+namespace Leek.Services;
+
+public class DatabaseProvider : IDataProvider, IDataReadProvider, IDataWriteProvider, IDataSearchProvider
+{
+    public bool SupportsConnection(ConnectionContext connection) =>
+         connection.Provider.Equals("sqlite", StringComparison.OrdinalIgnoreCase) ||
+         connection.Provider.Equals("mssql", StringComparison.OrdinalIgnoreCase);
+
+    public async Task<bool> Search(ConnectionContext connection, LeekSearchRequest request, CancellationToken cancellationToken = default)
+    {
+        // Console.WriteLine($"Searching for secret: {request.Secret} of type: {request.SecretType}");
+        using LeekDbContext context = CreateDbContext(connection);
+
+        // determine if the database is initialized, and if the schema is up to date
+        await context.Database.EnsureCreatedAsync(cancellationToken);
+
+        Hash[] results = await context.Hashes
+            .Where(x => x.Type == request.SecretType && x.Value.ToLower() == request.Secret.ToLower())
+            .AsNoTracking()
+            .ToArrayAsync(cancellationToken);
+
+        return results.Length > 0;
+    }
+
+    public virtual LeekDbContext CreateDbContext(ConnectionContext connection)
+    {
+        DbContextOptionsBuilder<LeekDbContext> builder = new();
+
+        switch (connection.Provider.ToLowerInvariant())
+        {
+            case "sqlite":
+                builder.UseSqlite(connection.ConnectionString);
+                break;
+            case "mssql":
+                builder.UseSqlServer(connection.ConnectionString);
+                break;
+            default:
+                throw new NotSupportedException($"Provider '{connection.Provider}' is not supported.");
+        }
+
+        return new LeekDbContext(builder.Options);
+    }
+
+    public Task AddAsync(ConnectionContext connection, HashEntity[] items, CancellationToken cancellationToken = default)
+        => AddWithRetryAsync(connection, items, cancellationToken);
+
+    async Task AddWithRetryAsync(ConnectionContext connection, HashEntity[] items, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await BulkAddAsync(connection, items, cancellationToken);
+        }
+        catch
+        {
+            Console.WriteLine("Attempt 1 hidden");
+            await Task.Delay(10, cancellationToken);
+            await AddSlowAsync(connection, items, cancellationToken);
+        }
+    }
+
+    async Task BulkAddAsync(ConnectionContext connection, HashEntity[] items, CancellationToken cancellationToken = default)
+    {
+        //using var context = CreateDbContext(connection);
+
+        //await context.Database.EnsureCreatedAsync(cancellationToken);
+
+        //// Hash the unique key to reduce data transferred
+        //var itemHashes = items.Select(i => new { i.Type, i.Value }).Distinct().ToList();
+
+        //// Get existing hashes in bulk
+        //var existingHashes = await context.Hashes
+        //    .Where(h => itemHashes.Select(i => i.Value).Contains(h.Value))
+        //    .Select(h => new { h.Type, h.Value })
+        //    .ToHashSetAsync(cancellationToken);
+
+        //// Filter new inserts in-memory
+        //var newHashes = items
+        //    .Where(i => !existingHashes.Contains(new { i.Type, i.Value }))
+        //    .DistinctBy(i => new { i.Type, i.Value }) // In case input has duplicates
+        //    .Select(i => new Hash
+        //    {
+        //        Type = i.Type,
+        //        Value = i.Value,
+        //        ForeignBreachCount = i.KnownBreachCount,
+        //        LocalBreachCount = 0,
+        //        CreatedAt = DateTime.UtcNow
+        //    })
+        //    .ToList();
+
+        //if (newHashes.Count > 0)
+        //{
+        //    // AddRange is much faster than per-item Add
+        //    context.Hashes.AddRange(newHashes);
+        //    await context.SaveChangesAsync(cancellationToken);
+        //}
+
+        using LeekDbContext context = CreateDbContext(connection);
+        await context.Database.EnsureCreatedAsync(cancellationToken);
+
+        Hash[] hashes = [.. items
+            .Select(i => new Hash
+            {
+                Type = i.Type,
+                Value = i.Value,
+                ForeignBreachCount = i.KnownBreachCount,
+                LocalBreachCount = 0,
+                CreatedAt = DateTime.UtcNow
+            })];
+
+        await context.BulkInsertOrUpdateAsync(hashes, cancellationToken: cancellationToken);
+
+        await context.BulkSaveChangesAsync(cancellationToken: cancellationToken);
+        //Console.WriteLine($"[{nameof(DatabaseProvider)}:{connection.Provider}] Added {newHashes.Count} new of {items.Length} items. {DateTime.UtcNow:mm:ss:fff}ms");
+    }
+
+    public async Task AddSlowAsync(ConnectionContext connection, HashEntity[] items, CancellationToken cancellationToken = default)
+    {
+        // var context = serviceProvider.GetRequiredService<TDbContext>();
+
+        using LeekDbContext context = CreateDbContext(connection);
+
+        // determine if the database is initialized, and if the schema is up to date
+        await context.Database.EnsureCreatedAsync(cancellationToken);
+
+        foreach (HashEntity item in items)
+        {
+            Hash? existing = await context.Hashes
+                .FirstOrDefaultAsync(x => x.Type == item.Type && x.Value == item.Value, cancellationToken);
+
+            if (existing == null)
+            {
+                Hash hash = new()
+                {
+                    Type = item.Type,
+                    Value = item.Value,
+                    ForeignBreachCount = item.KnownBreachCount,
+                    LocalBreachCount = 0,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                context.Hashes.Add(hash);
+            }
+        }
+
+        //Console.WriteLine($"[{nameof(DatabaseProvider)}:{connection.Provider}] TASK END {DateTime.UtcNow:mm:ss:fff}ms");
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async IAsyncEnumerable<HashEntity> GetHashesAsync(ConnectionContext connection, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using LeekDbContext context = CreateDbContext(connection);
+
+        // determine if the database is initialized, and if the schema is up to date
+        await context.Database.EnsureCreatedAsync(cancellationToken);
+
+        // Stream results as HashEntity
+        await foreach (Hash? hash in context.Hashes.AsAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            yield return new HashEntity
+            {
+                Type = hash.Type,
+                Value = hash.Value,
+                KnownBreachCount = hash.LocalBreachCount + hash.ForeignBreachCount,
+            };
+        }
+    }
+
+    // public async Task<long> GetHashCountAsync(ConnectionContext connection, CancellationToken cancellationToken = default)
+    // {
+    //     using var context = CreateDbContext(connection);
+    //     await context.Database.EnsureCreatedAsync(cancellationToken);
+
+    //     return await context.Hashes.CountAsync(cancellationToken: cancellationToken);
+    // }
+}
