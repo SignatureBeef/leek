@@ -6,19 +6,19 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Leek.Core' Or '$(MSBuildProjectName)' == 'Leek.Services' Or '$(MSBuildProjectName)' == 'Leek.AspNet'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Leek.Core' Or '$(MSBuildProjectName)' == 'Leek.Services' Or '$(MSBuildProjectName)' == 'Leek.AspNet' Or '$(MSBuildProjectName)' == 'Leek.Updater'">
     <PackageVersion>$(LeekVersion)</PackageVersion>
-    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>License</_Parameter1>
-      <_Parameter2>GPL-3.0-or-later</_Parameter2>
+      <_Parameter2>MIT</_Parameter2>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>LicenseUrl</_Parameter1>
-      <_Parameter2>https://www.gnu.org/licenses/gpl-3.0.html</_Parameter2>
+      <_Parameter2>https://opensource.org/license/MIT</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
   

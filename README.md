@@ -148,10 +148,24 @@ Leek is built with extensibility in mind. Future enhancements may include:
 
 ## License and more
 
-Licensed under [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html) (GPLv3).  
-This project is committed to being fully free, open, and transparent — for the betterment of the community.
+Leek is licensed under the **GPLv3** for source code to protect community contributions.
+
+However, to make it easier for real-world adoption:
+
+- **All official NuGet packages and CLI binaries are MIT licensed**
+- This means you can safely use them in closed-source projects, CI pipelines, and internal systems
+- All we ask for is a star, mention, or shout-out to help raise awareness
+
+| Component             | License |
+|-----------------------|---------|
+| Source code (this repo) | GPLv3 |
+| NuGet packages (e.g., Leek.Core) | MIT |
+| CLI binaries           | MIT |
+| Modifying the source   | GPLv3 applies |
+
+For full policy details, see [`LICENSE_POLICY.md`](./LICENSE_POLICY.md)
 
 > ⚠️ **Note**: While Leek is not a certified security product, it provides practical tooling to help integrate hash auditing into existing security workflows and improve the overall posture of .NET applications.  
 > It’s designed to be accessible and extensible, making it easier for teams to adopt better security hygiene — especially when faced with limited time, budget, or tooling.
 
-No warranties or official support provided. Use at your own risk.
+No warranties or official support provided. Use ethically at your own risk.
