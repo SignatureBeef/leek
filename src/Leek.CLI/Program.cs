@@ -11,7 +11,7 @@ using Leek.Services;
 
 Console.WriteLine("Leek CLI - is there a leek in your system?");
 Console.WriteLine($"Search and manage known bad hashes with ease.");
-Console.WriteLine("This software is free and open source under GPL-3.0 license. Use at your own risk.");
+Console.WriteLine("This software is free and open source under a dual MIT/GPL-3.0 license. Use at your own risk.");
 
 RootCommand rootCommand = new()
 {
