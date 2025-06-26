@@ -1,5 +1,5 @@
 # 🥬 Leek - Hash Auditor for Security Hygiene
-[![Build and Test](https://github.com/SignatureBeef/leek/actions/workflows/test.yml/badge.svg)](https://github.com/SignatureBeef/leek/actions/workflows/test.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Build and Test](https://github.com/SignatureBeef/leek/actions/workflows/test.yml/badge.svg)](https://github.com/SignatureBeef/leek/actions/workflows/test.yml) [![Source: GPL v3](https://img.shields.io/badge/Source-GPL%20v3-blue)](https://www.gnu.org/licenses/gpl-3.0) [![Binaries: MIT](https://img.shields.io/badge/Binaries-MIT-blue)](https://opensource.org/license/MIT)
 
 **Leek** is a CLI and .NET toolset for detecting breached or weak secrets such as passwords.  
 Inspired by _"There's a leek in the boat!" -Cloudy with a Chance of Meatballs_, it helps you **plug security holes before your system sinks.**
