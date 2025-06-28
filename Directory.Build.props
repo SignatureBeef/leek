@@ -9,6 +9,7 @@
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Leek.Core' Or '$(MSBuildProjectName)' == 'Leek.Services' Or '$(MSBuildProjectName)' == 'Leek.AspNet' Or '$(MSBuildProjectName)' == 'Leek.Updater'">
     <PackageVersion>$(LeekVersion)</PackageVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
