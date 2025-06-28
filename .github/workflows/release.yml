@@ -34,6 +34,7 @@ jobs:
   publish-nuget:
     needs: build-nuget-packages
     runs-on: ubuntu-latest
+    environment: release
     steps:
     - name: Download NuGet packages
       uses: actions/download-artifact@v4
