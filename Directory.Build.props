@@ -11,7 +11,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/SignatureBeef/leek</PackageProjectUrl> 
     <IsPackable>true</IsPackable>
-    <PackageProjectUrl>https://github.com/SignatureBeef/leek.git</RepositoryUrl> 
+    <RepositoryUrl>https://github.com/SignatureBeef/leek.git</RepositoryUrl> 
     <RepositoryType>git</RepositoryType> 
   </PropertyGroup>
 
