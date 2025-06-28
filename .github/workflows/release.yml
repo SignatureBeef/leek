@@ -45,7 +45,7 @@ jobs:
     - name: Publish NuGet Package
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-      run: dotnet nuget push ./artifacts/nuget/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key $NUGET_API_KEY
+      run: dotnet nuget push ./artifacts/nuget/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key "$NUGET_API_KEY"
 
   build-cli:
     runs-on: ${{ matrix.outputs.os }}
