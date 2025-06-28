@@ -76,7 +76,7 @@ jobs:
       if: matrix.outputs.os != 'windows-latest'
       run: |
         cd ./src/Leek.CLI
-        dotnet publish -r ${{ matrix.outputs.rid }} --framework net9.0 --self-contained true -c Release --no-restore -p:PublishTrimmed=true
+        dotnet publish -r ${{ matrix.outputs.rid }} --framework net9.0 --self-contained true -c Release --no-restore -p:PublishSingleFile=true
         mkdir -p ../../artifacts/builds
         cd ./bin/Release/net9.0/${{ matrix.outputs.rid }}/publish
         zip ../../../../../../../artifacts/builds/cli-${{ matrix.outputs.rid }}.zip -r .
@@ -85,7 +85,7 @@ jobs:
       if: matrix.outputs.os == 'windows-latest'
       run: |
         cd ./src/Leek.CLI
-        dotnet publish -r ${{ matrix.outputs.rid }} --framework net9.0 --self-contained true -c Release --no-restore -p:PublishTrimmed=true
+        dotnet publish -r ${{ matrix.outputs.rid }} --framework net9.0 --self-contained true -c Release --no-restore -p:PublishSingleFile=true
         mkdir -p ../../artifacts/builds
         cd ./bin/Release/net9.0/${{ matrix.outputs.rid }}/publish
         powershell Compress-Archive -Path "./*" -DestinationPath "../../../../../../../artifacts/builds/cli-${{ matrix.outputs.rid }}.zip"
