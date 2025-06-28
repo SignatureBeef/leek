@@ -9,7 +9,10 @@
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Leek.Core' Or '$(MSBuildProjectName)' == 'Leek.Services' Or '$(MSBuildProjectName)' == 'Leek.AspNet' Or '$(MSBuildProjectName)' == 'Leek.Updater'">
     <PackageVersion>$(LeekVersion)</PackageVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/SignatureBeef/leek</PackageProjectUrl> 
     <IsPackable>true</IsPackable>
+    <PackageProjectUrl>https://github.com/SignatureBeef/leek.git</RepositoryUrl> 
+    <RepositoryType>git</RepositoryType> 
   </PropertyGroup>
 
   <ItemGroup>
