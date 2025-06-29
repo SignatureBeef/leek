@@ -33,9 +33,9 @@ Leek focuses on the **hash** — not the password, and this means:
 
 ---
 
-## Supported Data Sources
+## Supported Data Providers
 
-Leek is built using one or more Data Providers that can be injected at runtime — below are the defaults supported:
+Leek is built using one or more Data Provider5 that can be injected at runtime — below are the defaults supported:
 
 - Microsoft SQL Server (`mssql`)
 - SQLite (`sqlite`)
@@ -65,6 +65,9 @@ leek --version
 
 # Check a secret or hash
 leek check <secret> [--type=<enter>] -p=<provider>[://<connection>]
+# e.g.
+# check test (check if test is found in the defaults)
+# check test -p=hibp -p="sqlite://Data Source=leek.db" (check specific providers)
 
 # Copies hashes from one provider/connection to another
 leek copy -fp=<provider>[://<connection>] -tp=<provider>[://<connection>]
@@ -142,7 +145,6 @@ Leek is built with extensibility in mind. Future enhancements may include:
 - Agent/daemon mode for long-running environments
 - Table/schema inference via adapters (e.g. WordPress, Laravel, etc.)
 - Additional hash methods, e.g. NTLM
-- Shortcut flags, e.g. -p=provider://connection-string
 
 ---
 
