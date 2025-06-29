@@ -3,33 +3,34 @@
 using Leek.Core.Providers;
 using Leek.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Leek.Updater;
 
-public class DefaultUpdateService(IEnumerable<IUpdateProvider> authorities) : IUpdateService
+public class DefaultUpdateService(IEnumerable<IUpdateProvider> authorities, ILogger<DefaultUpdateService> logger) : IUpdateService
 {
     public async Task UpdateAsync(ProviderConnection[] connections)
     {
         var authorityList = authorities.ToList();
         if (authorityList.Count == 0)
         {
-            Console.WriteLine("No update authorities configured. Please add at least one authority to the service.");
+            logger.LogError("No update authorities configured. Please add at least one authority to the service.");
             return;
         }
 
-        Task[] tasks = authorityList.Select(authority => authority.UpdateIntoAsync(connections)).ToArray();
-        Console.WriteLine($"Processing {tasks.Length} authorities for updates...");
+        Task[] tasks = [.. authorityList.Select(authority => authority.UpdateIntoAsync(connections))];
+        logger.LogInformation("Processing {AuthorityCount} authorities for updates...", tasks.Length);
         try
         {
             await Task.WhenAll(tasks);
-            Console.WriteLine("All authorities processed successfully.");
+            logger.LogInformation("All authorities processed successfully.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred while processing authorities: {ex.Message}");
+            logger.LogError(ex, "An error occurred while processing authorities.");
             // Handle exceptions as needed, e.g., log them or rethrow
         }
-        Console.WriteLine($"Update completed");
+        logger.LogInformation("Update completed");
     }
 }
 

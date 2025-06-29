@@ -4,14 +4,15 @@ using Leek.Core;
 using Leek.Core.Extensions;
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Leek.Services;
 
-public class HIBPProvider : IDataProvider, IDataSearchProvider
+public class HIBPProvider(ILogger<HIBPProvider> logger) : IDataProvider, IDataSearchProvider
 {
     public async Task<bool> Search(ConnectionContext connection, LeekSearchRequest request, CancellationToken cancellationToken = default)
     {
-        Console.WriteLine($"🔍 Searching breaches for secret: {request.Secret} of type: {request.SecretType} via haveibeenpwned.com");
+        logger.LogInformation("🔍 Searching breaches for secret: {Secret} of type: {SecretType} via haveibeenpwned.com", request.Secret, request.SecretType);
 
         const String BaseUrl = "https://api.pwnedpasswords.com/range/";
 
@@ -39,6 +40,13 @@ public class HIBPProvider : IDataProvider, IDataSearchProvider
     public bool SupportsConnection(ConnectionContext connection)
         => connection.Provider.Equals("hibp", StringComparison.OrdinalIgnoreCase) ||
            connection.Provider.Equals("haveibeenpwned", StringComparison.OrdinalIgnoreCase);
+
+    /// <inheritdoc/>
+    public ConnectionContext? CreateDefaultConnection() => new ConnectionContext
+    {
+        Provider = "hibp",
+        ConnectionString = "https://api.pwnedpasswords.com/range/"
+    };
 }
 
 public static class HIBPProviderExtensions

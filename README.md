@@ -64,14 +64,14 @@ leek -h
 leek --version
 
 # Check a secret or hash
-leek check <secret> [--type=<enter>] --provider=<enter> --connection-string=<enter>
+leek check <secret> [--type=<enter>] -p=<provider>[://<connection>]
 
 # Copies hashes from one provider/connection to another
-leek copy --from-provider=mssql --from-connection="enter" --to-provider=sqlite --to-connection="enter"
+leek copy -fp=<provider>[://<connection>] -tp=<provider>[://<connection>]
 
 # Loads online hash data into the destination provider/connection.
 # nb. this could take hours-days until our sources allow differentials
-leek update --provider=<enter> --connection-string=<enter>
+leek update -p=<provider>[://<connection>]
 ```
 
 ## API Usage

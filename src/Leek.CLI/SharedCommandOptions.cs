@@ -8,53 +8,41 @@ namespace Leek.CLI;
 
 internal static class SharedCommandOptions
 {
-    public static ConnectionContext Create(string? provider, string? connectionString)
+    static ConnectionContext ParseFromMaybeUri(string uri)
     {
-        // lets default to sqlite if no provider is specified
-        if (string.IsNullOrWhiteSpace(provider))
-            provider = "sqlite";
+        string provider = uri;
+        string connectionString = "";
 
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            connectionString = provider switch
-            {
-                "sqlite" => "Data Source=leek.db",
-                "mssql" => "Server=localhost;Database=leek;User Id=sa;Password=DoNotUseThisPassword123!;Encrypt=False",
-                "directory" => "filestore",
-                "hibp" or "haveibeenpwned" => "",
-                _ => throw new ArgumentException($"Unsupported provider: {provider}")
-            };
+        // does it contain :// ?
+        int index = uri.IndexOf("://", StringComparison.OrdinalIgnoreCase);
+        if (index > 0)
+        {            // it does, so we can assume it's a provider://connectionString format
+            provider = uri[..index].ToLowerInvariant();
+            connectionString = uri[(index + 3)..];
         }
 
-        return new ConnectionContext
-        {
-            Provider = provider,
-            ConnectionString = connectionString
-        };
+        return new(provider, connectionString);
     }
 
-    public static ConnectionContext[] CreateConnectionContextsOrDefaults(string? provider, string? connectionString)
-    => string.IsNullOrWhiteSpace(provider)
-            ? [
-                Create("mssql", connectionString),
-                Create("sqlite", connectionString),
-                Create("directory", connectionString),
-                Create("hibp", connectionString),
-            ]
-            : [Create(provider, connectionString)];
-
-    public static ProviderConnection[] CreateProviderConnections(string? provider, string? connectionString, IEnumerable<IDataProvider> providers)
+    public static ConnectionContext[] CreateConnections(IEnumerable<IDataProvider> registeredProviders, string[] requestedProviders)
     {
-        ConnectionContext[] connectionContexts = CreateConnectionContextsOrDefaults(provider, connectionString);
-
-        ProviderConnection[] connectionProviders = connectionContexts.AsProviderConnections(providers);
-        if (connectionProviders.Length == 0)
+        if (requestedProviders.Length == 0)
         {
-            // Console.WriteLine($"❗ No providers found for connections.");
-            // return false; // No providers to search
-            throw new InvalidOperationException("No providers found for connections.");
+            // No providers specified, return all registered providers with their default connections
+            return [.. registeredProviders
+                .Select(provider => provider.CreateDefaultConnection())
+                .Where(connection => connection != null)
+                .Cast<ConnectionContext>()];
         }
 
-        return connectionProviders;
+        return [.. requestedProviders
+            .Select(provider => ParseFromMaybeUri(provider))
+            .Where(connection => registeredProviders.Any(p => p.SupportsConnection(connection)))];
+    }
+
+    public static ProviderConnection[] CreateProviderConnections(IEnumerable<IDataProvider> registeredProviders, string[] requestedProviders)
+    {
+        ConnectionContext[] connections = CreateConnections(registeredProviders, requestedProviders);
+        return connections.AsProviderConnections(registeredProviders);
     }
 }

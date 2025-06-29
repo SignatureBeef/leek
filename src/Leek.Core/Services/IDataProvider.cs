@@ -15,4 +15,10 @@ public interface IDataProvider
     /// <param name="connection">The connection context to check.</param>
     /// <returns>True if the provider supports the connection, otherwise false.</returns>
     bool SupportsConnection(ConnectionContext connection);
+
+    /// <summary>
+    /// Creates a connection context for the provider.
+    /// </summary>
+    /// <returns>A new connection context if possible.</returns>
+    ConnectionContext? CreateDefaultConnection();
 }

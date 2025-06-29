@@ -5,14 +5,15 @@ using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
 using Leek.Core.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Leek.Services;
 
-public class DefaultAuditor(IEnumerable<IDataProvider> providers) : IAuditor
+public class DefaultAuditor(IEnumerable<IDataProvider> providers, ILogger<DefaultAuditor> logger) : IAuditor
 {
     public async Task<LeekSearchResponse> SearchBreaches(ConnectionContext[] connections, LeekSearchRequest request)
     {
-        Console.WriteLine($"🔍 Searching breaches for secret: {request.Secret} of type: {request.SecretType}");
+        logger.LogInformation("🔍 Searching breaches for secret: {Secret} of type: {SecretType}", request.Secret, request.SecretType);
 
         CancellationTokenSource cts = new();
 
@@ -44,7 +45,7 @@ public class DefaultAuditor(IEnumerable<IDataProvider> providers) : IAuditor
     async Task<LeekSearchResponse> SearchHashAsync(ConnectionContext[] connections, LeekSearchRequest request, CancellationToken cancellationToken)
     {
         LeekSearchRequest hashed = request.HashAs(request.SecretType);
-        Console.WriteLine($"👀 Searching {hashed.SecretType} hash: {hashed.Secret} ({request.SecretType})");
+        logger.LogInformation("👀 Searching {SecretType} hash: {Secret} ({RequestSecretType})", hashed.SecretType, hashed.Secret, request.SecretType);
 
         var stopwatch = Stopwatch.StartNew();
 

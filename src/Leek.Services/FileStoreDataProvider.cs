@@ -3,14 +3,21 @@
 using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 
 namespace Leek.Services;
 
-public class FileStoreDataProvider : IDataProvider, IDataReadProvider, IDataWriteProvider, IDataSearchProvider
+public class FileStoreDataProvider(ILogger<FileStoreDataProvider> logger) : IDataProvider, IDataReadProvider, IDataWriteProvider, IDataSearchProvider
 {
     public async Task AddAsync(ConnectionContext connection, HashEntity[] items, CancellationToken cancellationToken = default)
     {
+        if (String.IsNullOrWhiteSpace(connection.ConnectionString))
+        {
+            logger.LogInformation($"[{nameof(FileStoreDataProvider)}] No connection string provided, using default 'filestore' directory.");
+            connection.ConnectionString = "filestore";
+        }
+
         if (!Directory.Exists(connection.ConnectionString)) Directory.CreateDirectory(connection.ConnectionString);
 
         var secretTypes = items
@@ -45,8 +52,6 @@ public class FileStoreDataProvider : IDataProvider, IDataReadProvider, IDataWrit
                 await File.WriteAllLinesAsync(hashGroupFile, hashGroup.hashes.Select(x => $"{x.Value.ToLower()}:{x.KnownBreachCount}"), cancellationToken);
             }
         }
-
-        //Console.WriteLine($"[{nameof(FileStoreDataProvider)}] TASK END {DateTime.UtcNow:mm:ss:fff}ms");
     }
 
     static string GetSecretFolder(ConnectionContext connection, ESecretType type, string hash) =>
@@ -85,6 +90,13 @@ public class FileStoreDataProvider : IDataProvider, IDataReadProvider, IDataWrit
     {
         return connection.Provider.Equals("directory", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <inheritdoc/>
+    public ConnectionContext? CreateDefaultConnection() => new ConnectionContext
+    {
+        Provider = "directory",
+        ConnectionString = "filestore"
+    };
 
     // public async Task<long> GetHashCountAsync(ConnectionContext connection, CancellationToken cancellationToken = default)
     // {

@@ -18,6 +18,9 @@ public class WordlistProvider(IWordlistReader wordlistReader) : IDataProvider, I
 {
     public bool SupportsConnection(ConnectionContext connection) => connection.Provider.Equals("wordlist", StringComparison.OrdinalIgnoreCase);
 
+    /// <inheritdoc/>
+    public ConnectionContext? CreateDefaultConnection() => null; // not possible to assume a default wordlist file path
+
     public async Task<bool> Search(ConnectionContext connection, LeekSearchRequest request, CancellationToken cancellationToken = default)
     {
         bool fileExists = File.Exists(connection.ConnectionString);

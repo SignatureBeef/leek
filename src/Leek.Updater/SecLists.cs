@@ -3,6 +3,7 @@
 using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -14,7 +15,7 @@ namespace Leek.Updater;
 /// SecLists is a provider that updates Leek with wordlists from the SecLists repository.
 /// </summary>
 /// <param name="wordlistReader"></param>
-public class SecLists(IWordlistReader wordlistReader) : IUpdateProvider
+public class SecLists(IWordlistReader wordlistReader, ILogger<SecLists> logger) : IUpdateProvider
 {
     const String BaseRepositoryUrl = "https://raw.githubusercontent.com/danielmiessler/SecLists/refs/heads/master/";
 
@@ -26,15 +27,15 @@ public class SecLists(IWordlistReader wordlistReader) : IUpdateProvider
     public virtual async Task UpdateIntoAsync(ProviderConnection[] connections)
     {
         Task[] tasks = [.. Files.Select(file => UpdateIntoAsync(connections, file))];
-        Console.WriteLine($"Processing {tasks.Length} files for updates...");
+        logger.LogInformation("Processing {FileCount} files for updates...", tasks.Length);
         try
         {
             await Task.WhenAll(tasks);
-            Console.WriteLine("All files processed successfully.");
+            logger.LogInformation("All files processed successfully.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred while processing files: {ex.Message}");
+            logger.LogError(ex, "An error occurred while processing files.");
         }
     }
 
@@ -48,14 +49,14 @@ public class SecLists(IWordlistReader wordlistReader) : IUpdateProvider
             batch.Add(line);
             if (batch.Count >= 1000)
             {
-                Console.WriteLine($"Processing batch of {batch.Count} items from {fileName}");
+                logger.LogInformation("Processing batch of {BatchCount} items from {FileName}", batch.Count, fileName);
                 await InsertBatchAsync(connections, batch);
             }
         }
 
         if (batch.Count > 0)
         {
-            Console.WriteLine($"Processing final batch of {batch.Count} items from {fileName}");
+            logger.LogInformation("Processing final batch of {BatchCount} items from {FileName}", batch.Count, fileName);
             await InsertBatchAsync(connections, batch);
         }
     }

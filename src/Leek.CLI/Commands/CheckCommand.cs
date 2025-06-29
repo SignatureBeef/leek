@@ -3,6 +3,7 @@
 using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 
@@ -15,7 +16,6 @@ public class CheckCommand : Command
         AddOption(Type);
         AddArgument(Secret);
         AddOption(Provider);
-        AddOption(ConnectionString);
     }
 
     static readonly Argument<string> Secret = new(
@@ -47,35 +47,32 @@ public class CheckCommand : Command
         IsRequired = false
     };
 
-    static readonly Option<string?> Provider = new(
+    static readonly Option<string[]?> Provider = new(
          aliases: ["--provider", "-p"],
-         description: "The provider to use (e.g., sqlite, mssql, etc.).")
+         description: "The provider to use (e.g., sqlite://, mssql://, etc.).")
     {
-        // IsRequired = true
-    };
-
-    static readonly Option<string?> ConnectionString = new(
-        aliases: ["--connection-string", "-c", "-cs"],
-        description: "The connection string or path to the provider to update.")
-    {
-        // IsRequired = true // can default but may lead to user confusion if not specified
+        IsRequired = false, // defaults will be to all providers
+        AllowMultipleArgumentsPerToken = true,
     };
 }
 
-public class CheckCommandHandler(IAuditor auditor) : ICommandHandler
+public class CheckCommandHandler(IAuditor auditor, IEnumerable<IDataProvider> dataProviders, ILogger<CheckCommandHandler> logger) : ICommandHandler
 {
     public ESecretType? Type { get; set; }
     public string Secret { get; set; } = "";
-    public string? Provider { get; set; } = "";
-    public string? ConnectionString { get; set; } = "";
+    public string[]? Provider { get; set; }
 
     public int Invoke(InvocationContext context) => throw new NotImplementedException();
 
     public async Task<int> InvokeAsync(InvocationContext context)
     {
-        // Console.WriteLine($"Checking secret: {Secret} of type: {Type}, auditor: {auditor.GetType().Name}");
+        ConnectionContext[] connectionContexts = SharedCommandOptions.CreateConnections(dataProviders, Provider ?? []);
 
-        ConnectionContext[] connectionContexts = SharedCommandOptions.CreateConnectionContextsOrDefaults(Provider, ConnectionString);
+        if (connectionContexts.Length == 0)
+        {
+            logger.LogError("❗ No providers found for the specified connections.");
+            return -1; // Indicate no providers found
+        }
 
         LeekSearchResponse response = await auditor.SearchBreaches(connectionContexts, new LeekSearchRequest(Secret, Type ?? ESecretType.Secret));
 
@@ -84,12 +81,12 @@ public class CheckCommandHandler(IAuditor auditor) : ICommandHandler
             string foundIn = String.IsNullOrWhiteSpace(response.Location)
                 ? ""
                 : $" in {response.Location}";
-            Console.WriteLine($"🚨 Breach found{foundIn}! The secret is compromised, searched {connectionContexts.Length} providers.");
+            logger.LogCritical($"🚨 Breach found{foundIn}! The secret '{Secret}' is compromised, searched {connectionContexts.Length} providers.");
             return 1; // Indicate breach found
         }
         else
         {
-            Console.WriteLine($"✅ No breaches found for the secret, searched {connectionContexts.Length} providers.");
+            logger.LogInformation($"✅ No breaches found for the secret '{Secret}', searched {connectionContexts.Length} providers.");
         }
 
         return 0;

@@ -4,6 +4,7 @@ using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Leek.AspNet;
@@ -14,17 +15,17 @@ namespace Leek.AspNet;
 /// <typeparam name="TUser">The applications user type, passed to the UserManager.</typeparam>
 /// <param name="auditor">An instance of IAuditor to perform breach checks.</param>
 /// <param name="options">Configuration options for the LeekPasswordValidator, including connection settings.</param>
-public class LeekPasswordValidator<TUser>(IAuditor auditor, IOptions<LeekPasswordValidatorOptions> options) : IPasswordValidator<TUser> where TUser : class
+public class LeekPasswordValidator<TUser>(IAuditor auditor, IOptions<LeekPasswordValidatorOptions> options, ILogger<LeekPasswordValidator<TUser>> logger) : IPasswordValidator<TUser> where TUser : class
 {
     /// <inheritdoc />
     public async Task<IdentityResult> ValidateAsync(UserManager<TUser> manager, TUser user, string password)
     {
-        Console.WriteLine($"LeekPasswordValidator: Validating password for user {user?.GetType().Name ?? "unknown"}: {password}");
+        logger.LogInformation("LeekPasswordValidator: Validating password for user {UserType}: {Password}", user?.GetType().Name ?? "unknown", password);
 
-        var response = await auditor.SearchBreaches(options.Value.Connections, new LeekSearchRequest(password));
+        LeekSearchResponse response = await auditor.SearchBreaches(options.Value.Connections, new LeekSearchRequest(password));
         if (response.IsBreached)
         {
-            Console.WriteLine("LeekPasswordValidator: Password breach found!");
+            logger.LogCritical("LeekPasswordValidator: Password breach found for user ");
             return IdentityResult.Failed(new IdentityError
             {
                 Code = "PasswordBreach",

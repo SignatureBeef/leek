@@ -3,6 +3,7 @@
 using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 
@@ -13,37 +14,23 @@ public class CopyCommand : Command
     public CopyCommand() : base("copy", "Copy elements from one provider to another.")
     {
         AddOption(FromProvider);
-        AddOption(FromConnectionString);
         AddOption(ToProvider);
-        AddOption(ToConnectionString);
     }
 
-    static readonly Option<string?> FromProvider = new(
+    static readonly Option<string[]?> FromProvider = new(
          aliases: ["--from-provider", "-fp"],
-         description: "The provider pull the data from (e.g., sqlite, mssql, etc.).")
+         description: "The provider pull the data from (e.g., sqlite://, mssql://, etc.).")
     {
-        IsRequired = true
+        IsRequired = true,
+        AllowMultipleArgumentsPerToken = true, // allows multiple providers to be specified
     };
 
-    static readonly Option<string?> FromConnectionString = new(
-        aliases: ["--from-connection-string", "--from-connection", "-fc", "-fcs"],
-        description: "The connection string or path to the data source.")
-    {
-        IsRequired = true
-    };
-
-    static readonly Option<string?> ToProvider = new(
+    static readonly Option<string[]?> ToProvider = new(
          aliases: ["--to-provider", "-tp"],
-         description: "The provider send the data to (e.g., sqlite, mssql, etc.).")
+         description: "The provider send the data to (e.g., sqlite://, mssql://, etc.).")
     {
-        IsRequired = true
-    };
-
-    static readonly Option<string?> ToConnectionString = new(
-        aliases: ["--to-connection-string", "--to-connection", "-tc", "-tcs"],
-        description: "The connection string or path to the destination.")
-    {
-        IsRequired = true
+        IsRequired = true,
+        AllowMultipleArgumentsPerToken = true, // allows multiple providers to be specified
     };
 
     enum Variant
@@ -53,22 +40,31 @@ public class CopyCommand : Command
     }
 }
 
-public class CopyCommandHandler(IEnumerable<IDataProvider> dataProviders) : ICommandHandler
+public class CopyCommandHandler(IEnumerable<IDataProvider> dataProviders, ILogger<CopyCommandHandler> logger) : ICommandHandler
 {
-    public string? FromProvider { get; set; } = "";
-    public string? FromConnectionString { get; set; } = "";
+    public string[]? FromProvider { get; set; }
 
-    public string? ToProvider { get; set; } = "";
-    public string? ToConnectionString { get; set; } = "";
+    public string[]? ToProvider { get; set; }
 
     public int Invoke(InvocationContext context) => throw new NotImplementedException();
 
     public async Task<int> InvokeAsync(InvocationContext context)
     {
-        ProviderConnection[] fromConnectionProviders = SharedCommandOptions.CreateProviderConnections(FromProvider, FromConnectionString, dataProviders);
-        ProviderConnection[] toConnectionProviders = SharedCommandOptions.CreateProviderConnections(ToProvider, ToConnectionString, dataProviders);
+        ProviderConnection[] fromConnectionProviders = SharedCommandOptions.CreateProviderConnections(dataProviders, FromProvider ?? []);
+        ProviderConnection[] toConnectionProviders = SharedCommandOptions.CreateProviderConnections(dataProviders, ToProvider ?? []);
 
-        Console.WriteLine($"Copying from {fromConnectionProviders.Length} provider into {toConnectionProviders.Length} others.");
+        if (fromConnectionProviders.Length == 0)
+        {
+            logger.LogError("No valid 'from' providers specified. Please check your input.");
+            return 1;
+        }
+        if (toConnectionProviders.Length == 0)
+        {
+            logger.LogError("No valid 'to' providers specified. Please check your input.");
+            return 1;
+        }
+
+        logger.LogInformation("Copying from {FromCount} provider(s) into {ToCount} provider(s).", fromConnectionProviders.Length, toConnectionProviders.Length);
 
         List<HashEntity> queue = [];
         DateTime started = DateTime.UtcNow;
@@ -82,7 +78,7 @@ public class CopyCommandHandler(IEnumerable<IDataProvider> dataProviders) : ICom
 
             if (from.Provider is not IDataReadProvider fromProvider)
             {
-                Console.WriteLine($"Skipping {from.Connection.Provider} as it does not support writing.");
+                logger.LogWarning("Skipping {Provider} as it does not support reading.", from.Connection.Provider);
                 continue;
             }
 
@@ -93,7 +89,7 @@ public class CopyCommandHandler(IEnumerable<IDataProvider> dataProviders) : ICom
 
                 if (queue.Count >= 1000 * 20)
                 {
-                    HashEntity[] batch = queue.ToArray();
+                    HashEntity[] batch = [.. queue];
                     queue.Clear();
                     IEnumerable<Task> tasks = toConnectionProviders
                         .Where(to => to.Provider is IDataWriteProvider)
@@ -106,10 +102,9 @@ public class CopyCommandHandler(IEnumerable<IDataProvider> dataProviders) : ICom
                     TimeSpan taken = DateTime.UtcNow - started;
                     double hashesPerSecond = Math.Round(processed / taken.TotalSeconds, 2);
 
-                    //var progress = Math.Round(++count / (double)numHashes * 100, 2);
                     string to = String.Join(",", toConnectionProviders.Select(x => x.Connection.Provider).Distinct());
-                    Console.WriteLine($"Copied batch of {batch.Length} @{hashesPerSecond}hps from {from.Connection.Provider} into {to}");
-                    //Console.WriteLine($"Copied batch of {batch.Length} @{hashesPerSecond}hps from {from.Connection.Provider} into {to} {progress}% t:{numHashes}");
+                    logger.LogInformation("Copied batch of {BatchSize} hashes @{HashesPerSecond}hps from {FromProvider} into {ToProviders}.",
+                        batch.Length, hashesPerSecond, from.Connection.Provider, to);
                 }
             }
         }
@@ -122,13 +117,9 @@ public class CopyCommandHandler(IEnumerable<IDataProvider> dataProviders) : ICom
                 .Where(to => to.Provider is IDataWriteProvider)
                 .Select(to => (to.Provider as IDataWriteProvider)!.AddAsync(to.Connection, batch));
             await Task.WhenAll(tasks);
-            Console.WriteLine($"Copied last batch of {batch.Length}");
+            logger.LogInformation("Copied last batch of {BatchSize} hashes from {FromProvider} into {ToProviders}.",
+                batch.Length, fromConnectionProviders.First().Connection.Provider, String.Join(",", toConnectionProviders.Select(x => x.Connection.Provider).Distinct()));
         }
-
-        //foreach (var to in toConnectionProviders)
-        //{
-        //    await CopyToProviderAsync(from, to);
-        //}
 
         return 0;
     }

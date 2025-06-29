@@ -3,6 +3,7 @@
 using Leek.Core;
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace Leek.Updater;
@@ -10,7 +11,7 @@ namespace Leek.Updater;
 /// <summary>
 /// Provides an implementation for updating breaches from haveibeenpwned.com.
 /// </summary>
-public class HIBP : IUpdateProvider
+public class HIBP(ILogger<HIBP> logger) : IUpdateProvider
 {
     static IEnumerable<string> GenerateHashPrefixes()
     {
@@ -24,7 +25,7 @@ public class HIBP : IUpdateProvider
 
     public async Task UpdateIntoAsync(ProviderConnection[] connections)
     {
-        Console.WriteLine($"🔍 Updating breaches from haveibeenpwned.com for {Max} hash prefixes...");
+        logger.LogInformation("🔍 Updating breaches from haveibeenpwned.com for {Max} hash prefixes...", Max);
 
         using HttpClient client = new();
         int count = 0;
@@ -42,7 +43,6 @@ public class HIBP : IUpdateProvider
 
             double hashesPerSecond = Math.Round(totalHashes / sw.Elapsed.TotalSeconds, 2);
 
-
             string url = $"https://api.pwnedpasswords.com/range/{hash}";
             try
             {
@@ -58,15 +58,6 @@ public class HIBP : IUpdateProvider
                 {
                     string content = await response.Content.ReadAsStringAsync();
 
-                    // Console.WriteLine($"Successfully fetched data for hash prefix: {hash}");
-                    // Console.WriteLine($"Content: {content[..Math.Min(100, content.Length)]}..."); // Display first 100 characters
-
-                    // Console.WriteLine($"Response Headers for {hash}:");
-                    // foreach (var header in response.Headers)
-                    // {
-                    //     Console.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
-                    // }
-
                     double msHttpReq = Math.Round((DateTime.UtcNow - started).TotalMilliseconds, 2);
 
                     HashEntity[] data = content.Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -80,36 +71,32 @@ public class HIBP : IUpdateProvider
                                                    })
                                                    .ToArray();
 
-                    Task[] tasks = connections
+                    Task[] tasks = [.. connections
                         .Where(item => item.Provider is IDataWriteProvider)
-                        .Select(item => (item.Provider as IDataWriteProvider)!.AddAsync(item.Connection, data))
-                        .ToArray();
+                        .Select(item => (item.Provider as IDataWriteProvider)!.AddAsync(item.Connection, data))];
 
                     DateTime msDataProvidersStarted = DateTime.UtcNow;
 
-                    //await Task.WhenAll(tasks);
-                    // Console.WriteLine($"Inserted {data.Length} records for hash prefix: {hash} into {tasks.Length} providers.");
-
-                    //_ = Task.WhenAll(tasks).ConfigureAwait(false);
                     await Task.WhenAll(tasks);
 
                     double msDataProvidersProcessed = Math.Round((DateTime.UtcNow - msDataProvidersStarted).TotalMilliseconds, 2);
 
-                    Console.WriteLine($"[{hash}] #{data.Length} {progress * 100:F2}% rem:{remaining} days:{ts.TotalDays} hps:{hashesPerSecond} p:{tasks.Length} h:{msHttpReq}ms dp:{msDataProvidersProcessed}ms");
+                    logger.LogInformation("[{Hash}] #{Count} {Progress:P2}% rem:{Remaining} days:{Days} hps:{HashesPerSecond} p:{Providers} h:{HttpReq}ms dp:{DataProviders}ms",
+                        hash, data.Length, progress, remaining, ts.TotalDays, hashesPerSecond, tasks.Length, msHttpReq, msDataProvidersProcessed);
 
                     totalHashes += data.LongLength;
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to fetch data for hash prefix: {hash}, Status Code: {response.StatusCode}");
+                    logger.LogWarning("Failed to fetch data for hash prefix: {Hash}, Status Code: {StatusCode}", hash, response.StatusCode);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching data for hash prefix {hash}: {ex.Message}");
+                logger.LogError(ex, "Error fetching data for hash prefix {Hash}", hash);
                 if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"Error fetching data for hash prefix {hash}: {ex.InnerException.Message}");
+                    logger.LogError(ex.InnerException, "Inner exception while fetching data for hash prefix {Hash}", hash);
                 }
             }
 

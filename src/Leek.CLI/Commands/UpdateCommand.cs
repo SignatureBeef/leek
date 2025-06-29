@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 using Leek.Core.Providers;
 using Leek.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 
@@ -12,40 +13,38 @@ public class UpdateCommand : Command
     public UpdateCommand() : base("update", "Updates the desired provider with hashes from trusted authorities.")
     {
         AddOption(Provider);
-        AddOption(ConnectionString);
     }
 
     static readonly Option<string?> Provider = new(
          aliases: ["--provider", "-p"],
-         description: "The provider to use (e.g., sqlite, mssql, etc.).")
+         description: "The provider to use (e.g., sqlite://, mssql://, etc.).")
     {
-        IsRequired = true
-    };
-
-    static readonly Option<string?> ConnectionString = new(
-        aliases: ["--connection-string", "-c", "-cs"],
-        description: "The connection string or path to the provider to update.")
-    {
-        IsRequired = true // can default but may lead to user confusion if not specified
+        IsRequired = true,
+        AllowMultipleArgumentsPerToken = false, // only one provider can be specified
     };
 }
 
-public class UpdateCommandHandler(IAuditor auditor, IUpdateService updateService, IEnumerable<IDataProvider> dataProviders) : ICommandHandler
+public class UpdateCommandHandler(IUpdateService updateService, IEnumerable<IDataProvider> dataProviders, ILogger<UpdateCommandHandler> logger) : ICommandHandler
 {
-    public string? Provider { get; set; } = "";
-    public string? ConnectionString { get; set; } = "";
+    public string[]? Provider { get; set; }
 
     public int Invoke(InvocationContext context) => throw new NotImplementedException();
 
     public async Task<int> InvokeAsync(InvocationContext context)
     {
-        Console.WriteLine($"Updating {Provider} database with using auditor: {auditor.GetType().Name}");
+        ProviderConnection[] connectionProviders = SharedCommandOptions.CreateProviderConnections(dataProviders, Provider ?? []);
 
-        ProviderConnection[] connectionProviders = SharedCommandOptions.CreateProviderConnections(Provider, ConnectionString, dataProviders);
+        if (connectionProviders.Length == 0)
+        {
+            logger.LogError("No valid providers specified. Please check your input.");
+            return 1;
+        }
+
+        logger.LogInformation("Starting update for {ProviderCount} provider(s).", connectionProviders.Length);
 
         await updateService.UpdateAsync(connectionProviders);
 
-        Console.WriteLine("Update completed successfully.");
+        logger.LogInformation("Update completed successfully for {ProviderCount} provider(s).", connectionProviders.Length);
 
         return 0;
     }

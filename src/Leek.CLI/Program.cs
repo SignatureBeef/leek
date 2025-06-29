@@ -8,6 +8,7 @@ using Leek.CLI.Commands;
 using Microsoft.Extensions.Hosting;
 using Leek.Updater;
 using Leek.Services;
+using Microsoft.Extensions.Logging;
 
 Console.WriteLine("Leek CLI - is there a leek in your system?");
 Console.WriteLine($"Search and manage known bad hashes with ease.");
@@ -34,13 +35,22 @@ var parser = new CommandLineBuilder(rootCommand)
                 .AddUpdateService();
         });
 
+        host.ConfigureLogging((ctx, builder) =>
+        {
+            builder.AddConsole()
+                .SetMinimumLevel(LogLevel.Information);
+        });
+
         host.UseCommandHandler<CheckCommand, CheckCommandHandler>();
         host.UseCommandHandler<UpdateCommand, UpdateCommandHandler>();
         host.UseCommandHandler<CopyCommand, CopyCommandHandler>();
     })
     .Build();
 
-return await parser.InvokeAsync(args);
+// return await parser.InvokeAsync(args);
+// await File.WriteAllLinesAsync("test.txt", ["test1", "test2", "test3"]);
+return await parser.InvokeAsync("check test");
+//return await parser.InvokeAsync("check test -p=mssql -p=sqlite -p=hibp -p=wordlist://test.txt");
 
 // return await parser.InvokeAsync("check 6677b2c394311355b54f25eec5bfacf5 -t=ntlm -p=hibp");
 // return await parser.InvokeAsync("-h");
