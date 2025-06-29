@@ -31,6 +31,7 @@ public class AuditFixture : IDisposable, IAsyncDisposable
         services.AddLeekServices()
             .AddWordlistProvider()
             .AddWordlistReader();
+        services.AddLogging();
         ServiceProvider = services.BuildServiceProvider();
 
         Service = ServiceProvider.GetRequiredService<IAuditor>();
