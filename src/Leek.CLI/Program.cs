@@ -47,9 +47,9 @@ var parser = new CommandLineBuilder(rootCommand)
     })
     .Build();
 
-// return await parser.InvokeAsync(args);
+return await parser.InvokeAsync(args);
 // await File.WriteAllLinesAsync("test.txt", ["test1", "test2", "test3"]);
-return await parser.InvokeAsync("check test");
+// return await parser.InvokeAsync("check test -p=hibp -p=\"sqlite://Data Source=leek.db\"");
 //return await parser.InvokeAsync("check test -p=mssql -p=sqlite -p=hibp -p=wordlist://test.txt");
 
 // return await parser.InvokeAsync("check 6677b2c394311355b54f25eec5bfacf5 -t=ntlm -p=hibp");
