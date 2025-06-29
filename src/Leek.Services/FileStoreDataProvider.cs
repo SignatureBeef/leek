@@ -174,3 +174,14 @@ public class FileStoreDataProvider : IDataProvider, IDataReadProvider, IDataWrit
         }
     }
 }
+
+public static class FileStoreDataProviderExtensions
+{
+    public static ConnectionBuilder WithFileStore(this ConnectionBuilder builder, string directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+            throw new ArgumentException("Directory path cannot be null or empty.", nameof(directoryPath));
+
+        return builder.WithProvider("directory").WithConnectionString(directoryPath);
+    }
+}

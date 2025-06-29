@@ -183,3 +183,19 @@ public class DatabaseProvider : IDataProvider, IDataReadProvider, IDataWriteProv
     //     return await context.Hashes.CountAsync(cancellationToken: cancellationToken);
     // }
 }
+
+public static class DatabaseProviderExtensions
+{
+    public static ConnectionBuilder WithMsSqlServer(this ConnectionBuilder builder)
+        => builder.WithProvider("mssql");
+
+    public static ConnectionBuilder WithMsSqlServer(this ConnectionBuilder builder, string connectionString)
+        => builder.WithProvider("mssql").WithConnectionString(connectionString);
+
+
+    public static ConnectionBuilder WithSqlite(this ConnectionBuilder builder)
+        => builder.WithProvider("sqlite");
+
+    public static ConnectionBuilder WithSqlite(this ConnectionBuilder builder, string connectionString)
+        => builder.WithProvider("sqlite").WithConnectionString(connectionString);
+}

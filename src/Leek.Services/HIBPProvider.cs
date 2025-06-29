@@ -40,3 +40,12 @@ public class HIBPProvider : IDataProvider, IDataSearchProvider
         => connection.Provider.Equals("hibp", StringComparison.OrdinalIgnoreCase) ||
            connection.Provider.Equals("haveibeenpwned", StringComparison.OrdinalIgnoreCase);
 }
+
+public static class HIBPProviderExtensions
+{
+    public static ConnectionBuilder WithHIBPProvider(this ConnectionBuilder builder)
+    {
+        return builder.WithProvider("hibp")
+                      .WithConnectionString("https://api.pwnedpasswords.com/range/");
+    }
+}

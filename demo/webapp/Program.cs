@@ -22,15 +22,17 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 builder.Services.AddRazorPages();
 
 // bind leek to the existing ef connection, and throw in a wordlist for a bonus example.
-ConnectionContext sqliteConnection = new("sqlite", connectionString);
+ConnectionContext sqliteConnection = new ConnectionBuilder()
+    .WithSqlite(connectionString)
+    .Build();
 builder.Services.Configure<LeekPasswordValidatorOptions>(opt =>
 {
     var wordlist = "example-wordlist.txt"; // Replace from config, or use a real wordlist file.
     File.WriteAllLines(wordlist, ["password", "123456", "letmein", "qwerty"]);
     opt.Connections = [
         sqliteConnection,
-        new ConnectionContext("wordlist", wordlist), // nb i wouldnt really recommend this in a production instance, rather you would copy it into a database or use hibp's provider.
-        new ConnectionContext("hibp", "") // this uses the HIBP k-Anonymity provider, which does not require a connection string.
+        new ConnectionBuilder().WithWordlistProvider(wordlist).Build(),  // nb i wouldnt really recommend this in a production instance, rather you would copy it into a database or use hibp's provider.
+        new ConnectionBuilder().WithHIBPProvider().Build() // this uses the HIBP k-Anonymity provider, which does not require a connection string.
     ];
 });
 

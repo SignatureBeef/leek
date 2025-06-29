@@ -66,3 +66,12 @@ public class WordlistProvider(IWordlistReader wordlistReader) : IDataProvider, I
         }
     }
 }
+
+public static class WordlistProviderExtensions
+{
+    public static ConnectionBuilder WithWordlistProvider(this ConnectionBuilder builder, string wordlistFilePath)
+    {
+        return builder.WithProvider("wordlist")
+                      .WithConnectionString(wordlistFilePath);
+    }
+}
