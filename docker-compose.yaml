@@ -1,5 +1,5 @@
 services:
-  sqlserver:
+  mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: mssql
     environment:
@@ -10,5 +10,33 @@ services:
     volumes:
       - mssql:/var/opt/mssql
 
+  wordpress:
+    image: wordpress
+    restart: always
+    ports:
+      - 80:80
+    environment:
+      WORDPRESS_DB_HOST: wordpress_database
+      WORDPRESS_DB_NAME: leek_wordpress
+      WORDPRESS_DB_USER: changemeuser
+      WORDPRESS_DB_PASSWORD: BeSureToChangeThisPassword123!
+    volumes:
+      - wordpress:/var/www/html
+
+  wordpress_database:
+    image: mysql:8.0
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: leek_wordpress
+      MYSQL_USER: changemeuser
+      MYSQL_PASSWORD: BeSureToChangeThisPassword123!
+      MYSQL_RANDOM_ROOT_PASSWORD: 'BeSureToChangeThisPassword456!'
+    volumes:
+      - wordpress_database:/var/lib/mysql
+
 volumes:
+  wordpress:
+  wordpress_database:
   mssql:

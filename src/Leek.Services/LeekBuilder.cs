@@ -90,6 +90,18 @@ public static class Extensions
     }
 
     /// <summary>
+    /// Adds a Wordpress provider to the Leek service collection.
+    /// </summary>
+    /// <param name="builder">The <see cref="LeekBuilder"/> instance to configure.</param>
+    /// <returns>The same <see cref="LeekBuilder"/> instance for method chaining.</returns>
+    public static LeekBuilder AddWordpressProvider(this LeekBuilder builder)
+    {
+        builder.Services.AddTransient<IDataProvider, WordpressProvider>();
+        builder.Services.AddTransient<DatabaseProvider>();
+        return builder;
+    }
+
+    /// <summary>
     /// Adds a set of default services to the Leek service collection.
     /// This includes database, file store, HIBP, wordlist reader, and wordlist provider.
     /// </summary>
@@ -101,7 +113,8 @@ public static class Extensions
                .AddFileStoreProvider()
                .AddHIBPProvider()
                .AddWordlistReader()
-               .AddWordlistProvider();
+               .AddWordlistProvider()
+               .AddWordpressProvider();
         return builder;
     }
 }

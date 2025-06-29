@@ -6,10 +6,11 @@ using Leek.Core.Providers;
 using Leek.Core.Services;
 using Leek.Core.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Leek.Services;
 
-public class DefaultAuditor(IEnumerable<IDataProvider> providers, ILogger<DefaultAuditor> logger) : IAuditor
+public class DefaultAuditor(ILogger<DefaultAuditor> logger, IServiceProvider serviceProvider) : IAuditor
 {
     public async Task<LeekSearchResponse> SearchBreaches(ConnectionContext[] connections, LeekSearchRequest request)
     {
@@ -25,6 +26,9 @@ public class DefaultAuditor(IEnumerable<IDataProvider> providers, ILogger<Defaul
                 .Where(x => x != ESecretType.Secret) // Exclude the plain text secret type
                 .Select(secretType => SearchHashAsync(connections, new LeekSearchRequest(request.Secret, secretType), cts.Token))
             ];
+
+        if (tasks.Count == 0)
+            return new LeekSearchResponse(false, $"❗ No valid secret types found for secret: {request.Secret}", null);
 
         while (tasks.Count != 0)
         {
@@ -45,9 +49,10 @@ public class DefaultAuditor(IEnumerable<IDataProvider> providers, ILogger<Defaul
     async Task<LeekSearchResponse> SearchHashAsync(ConnectionContext[] connections, LeekSearchRequest request, CancellationToken cancellationToken)
     {
         LeekSearchRequest hashed = request.HashAs(request.SecretType);
-        logger.LogInformation("👀 Searching {SecretType} hash: {Secret} ({RequestSecretType})", hashed.SecretType, hashed.Secret, request.SecretType);
 
         var stopwatch = Stopwatch.StartNew();
+
+        IEnumerable<IDataProvider> providers = serviceProvider.GetServices<IDataProvider>();
 
         ProviderConnection[] connectionProviders = connections.AsProviderConnections(providers);
         if (connectionProviders.Length == 0)
@@ -58,6 +63,8 @@ public class DefaultAuditor(IEnumerable<IDataProvider> providers, ILogger<Defaul
 
         if (searchProviders.Any(x => x.Provider == null))
             return new(false, "❗ No search providers found for connections.", null);
+
+        logger.LogInformation("👀 Searching {SecretType} hash {Secret} via {NumProviders} provider(s)", hashed.SecretType, hashed.Secret, searchProviders.Length);
 
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         CancellationToken internalToken = linkedCts.Token;

@@ -36,7 +36,7 @@ internal static class SharedCommandOptions
         }
 
         return [.. requestedProviders
-            .Select(provider => ParseFromMaybeUri(provider))
+            .Select(ParseFromMaybeUri)
             .Where(connection => registeredProviders.Any(p => p.SupportsConnection(connection)))];
     }
 

@@ -75,6 +75,14 @@ leek copy -fp=<provider>[://<connection>] -tp=<provider>[://<connection>]
 # Loads online hash data into the destination provider/connection.
 # nb. this could take hours-days until our sources allow differentials
 leek update -p=<provider>[://<connection>]
+
+# Scan a target for breaches in known providers
+# options: wordpress:database://<mysql connection string>
+# nb. future plans for wordpress:sftp, and generic table scanning e.g. query:mysql://SELECT user_login AS `Username`, user_pass AS `Secret`, 'wp-sha384' AS `SecretType` FROM wp_users WHERE user_status = 0 AND user_pass LIKE '$wp%';
+leek scan -t=<target>[://<connection] -p=<provider>[://<connection>]
+# e.g.
+# scan -t=wordpress:database (scan a wordpress database with defaults)
+# scan -t=wordpress:database -p=hibp (scan wordpress and check against hibp)
 ```
 
 ## API Usage
@@ -143,7 +151,7 @@ Leek is built with extensibility in mind. Future enhancements may include:
 - Integration with external scanning tools and log systems
 - Auto-redaction alerts (log scanning)
 - Agent/daemon mode for long-running environments
-- Table/schema inference via adapters (e.g. WordPress, Laravel, etc.)
+- Table/schema inference via adapters (e.g. WordPress(mysql,sftp), Laravel, etc.)
 - Additional hash methods, e.g. NTLM
 
 ---

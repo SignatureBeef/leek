@@ -59,4 +59,18 @@ public static class GeneralExtensions
     /// <param name="bytes">The byte array to convert.</param>
     /// <returns>A lowercase hexadecimal string representation of the byte array.</returns>
     private static string ToHexString(this byte[] bytes) => Convert.ToHexStringLower(bytes);
+
+    /// <summary>
+    /// Converts a <see cref="ConnectionContext"/> to a new instance with the specified provider.
+    /// </summary>
+    /// <param name="connection">Connection context to convert.</param>
+    /// <param name="provider">The provider to set for the new connection context.</param>
+    /// <returns>A new <see cref="ConnectionContext"/> with the specified provider and the same connection string.</returns>
+    public static ConnectionContext AsProvider(this ConnectionContext connection, string provider)
+    {
+        if (connection.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase))
+            return connection; // No change needed
+
+        return new ConnectionContext(provider, connection.ConnectionString);
+    }
 }

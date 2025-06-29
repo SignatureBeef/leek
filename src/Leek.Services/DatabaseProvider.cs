@@ -15,7 +15,8 @@ public class DatabaseProvider(ILogger<DatabaseProvider> logger) : IDataProvider,
 {
     public bool SupportsConnection(ConnectionContext connection) =>
          connection.Provider.Equals("sqlite", StringComparison.OrdinalIgnoreCase) ||
-         connection.Provider.Equals("mssql", StringComparison.OrdinalIgnoreCase);
+         connection.Provider.Equals("mssql", StringComparison.OrdinalIgnoreCase) ||
+         connection.Provider.Equals("mysql", StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
     public ConnectionContext? CreateDefaultConnection() => new ConnectionContext
@@ -48,7 +49,7 @@ public class DatabaseProvider(ILogger<DatabaseProvider> logger) : IDataProvider,
             case "sqlite":
                 if (String.IsNullOrWhiteSpace(connection.ConnectionString))
                 {
-                    logger.LogInformation($"[{nameof(DatabaseProvider)}] No connection string provided, using default 'leek.db'.");
+                    logger.LogInformation("No connection string provided, using default 'leek.db'.");
                     connection.ConnectionString = "Data Source=leek.db";
                 }
                 builder.UseSqlite(connection.ConnectionString);
@@ -56,10 +57,18 @@ public class DatabaseProvider(ILogger<DatabaseProvider> logger) : IDataProvider,
             case "mssql":
                 if (String.IsNullOrWhiteSpace(connection.ConnectionString))
                 {
-                    logger.LogInformation($"[{nameof(DatabaseProvider)}] No connection string provided, using default `localhost` instance with database 'leek'.");
+                    logger.LogInformation("No connection string provided, using default `localhost` instance with database 'leek'.");
                     connection.ConnectionString = "Server=localhost;Database=leek;User Id=sa;Password=DoNotUseThisPassword123!;Encrypt=False";
                 }
                 builder.UseSqlServer(connection.ConnectionString);
+                break;
+            case "mysql":
+                if (String.IsNullOrWhiteSpace(connection.ConnectionString))
+                {
+                    logger.LogInformation("No connection string provided, using default `localhost` instance with database 'leek'.");
+                    connection.ConnectionString = "Server=localhost;Database=leek_wordpress;User Id=changemeuser;Password=BeSureToChangeThisPassword123!";
+                }
+                builder.UseMySql(connection.ConnectionString, ServerVersion.AutoDetect(connection.ConnectionString));
                 break;
             default:
                 throw new NotSupportedException($"Provider '{connection.Provider}' is not supported.");

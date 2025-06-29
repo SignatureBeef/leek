@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Leek.Updater;
 using Leek.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 Console.WriteLine("Leek CLI - is there a leek in your system?");
 Console.WriteLine($"Search and manage known bad hashes with ease.");
@@ -23,6 +24,7 @@ RootCommand rootCommand = new()
 rootCommand.AddCommand(new CheckCommand());
 rootCommand.AddCommand(new UpdateCommand());
 rootCommand.AddCommand(new CopyCommand());
+rootCommand.AddCommand(new ScanCommand());
 
 var parser = new CommandLineBuilder(rootCommand)
     .UseDefaults()
@@ -38,14 +40,26 @@ var parser = new CommandLineBuilder(rootCommand)
         host.ConfigureLogging((ctx, builder) =>
         {
             builder.AddConsole()
-                .SetMinimumLevel(LogLevel.Information);
+                .SetMinimumLevel(LogLevel.Information)
+                .AddSimpleConsole(options =>
+                {
+                    options.IncludeScopes = false;
+                    options.SingleLine = true;
+                    options.ColorBehavior = LoggerColorBehavior.Enabled;
+                    options.TimestampFormat = "HH:mm:ss ";
+                });
         });
 
         host.UseCommandHandler<CheckCommand, CheckCommandHandler>();
         host.UseCommandHandler<UpdateCommand, UpdateCommandHandler>();
         host.UseCommandHandler<CopyCommand, CopyCommandHandler>();
+        host.UseCommandHandler<ScanCommand, ScanCommandHandler>();
     })
     .Build();
+
+// #if DEBUG
+// await parser.InvokeAsync("scan -t=wordpress:database");
+// #endif
 
 return await parser.InvokeAsync(args);
 // await File.WriteAllLinesAsync("test.txt", ["test1", "test2", "test3"]);
